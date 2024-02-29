@@ -1,5 +1,3 @@
-Upgrade EKS from 1.27 to 1.28
-
 ## EKS Upgrades (X.XX)
 
 ### EKS Upgrade Links
@@ -26,7 +24,7 @@ We have 5 steps:
 
 ### Step 02: Patch kubeproxy
 - [Check the image version for each Amazon EKS supported cluster version](https://docs.aws.amazon.com/eks/latest/userguide/managing-kube-proxy.html)
-- Make sure to match version listed in chart on the AWS upgrade doc, example below is from version 1.27 to version 1.28
+- Make sure to match version listed in chart on the AWS upgrade doc, example below is from version 1.27 to version 1.29
     - Verify
     ```sh
     kubectl get daemonset kube-proxy \
@@ -35,11 +33,12 @@ We have 5 steps:
     ```
     - Output
     ```sh
-    602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.19.6-eksbuild.2
+    602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.27.10-minimal-eksbuild.2
     ```
-    - Update , make sure to set the region correctly. This will change the kube-proxy image from 1.23 to 1.24
+    - Update , make sure to set the region correctly. This will change the kube-proxy image from 1.27 to 1.28
     ```sh
-    kubectl set image daemonset.apps/kube-proxy -n kube-system kube-proxy=602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/kube-proxy:v1.24.10-minimal-eksbuild.1
+    kubectl set image daemonset.apps/kube-proxy -n kube-system kube-proxy=602401143452.dkr.ecr.[region_name].amazonaws.com/eks/kube-proxy:v1.28.6-minimal-eksbuild.2
+
     ```
     - Verify if the kube-proxy pods are running in kube-system ns
     ```
@@ -63,10 +62,15 @@ We have 5 steps:
     - Update the CoreDNS (make sure to set the region correctly)
     ```sh
     kubectl set image --namespace kube-system deployment.apps/coredns \
-    coredns=602401143452.dkr.ecr.[region_name].amazonaws.com/eks/coredns:v1.8.3-eksbuild.1
+    coredns=602401143452.dkr.ecr.[region_name].amazonaws.com/eks/coredns:v1.10.1-eksbuild.7
     
     kubectl set image --namespace kube-system deployment.apps/coredns \
-    coredns=602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.9.3-eksbuild.3
+    coredns=602401143452.dkr.ecr.us-east-1.amazonaws.com/eks/coredns:v1.10.1-eksbuild.7
+    ```
+     ```
+    - Verify if the coredns pods are running in kube-system ns
+    ```
+    kubectl get po -n kube-system |grep coredns
     ```
     - Edit the cluster role and add the below content at the end if it does not exist
     ```sh
@@ -78,11 +82,7 @@ We have 5 steps:
     verbs:
     - list
     - watch
-    ```
-    - Verify if the coredns pods are running in kube-system ns
-    ```
-    kubectl get po -n kube-system |grep coredns
-    ```
+   
 
 ## Step 04: Patch AWS CNI
 - [Check the image version for each Amazon EKS supported cluster version](https://docs.aws.amazon.com/eks/latest/userguide/managing-vpc-cni.html). [VPC CNI Github release version](https://github.com/aws/amazon-vpc-cni-k8s/tags)
@@ -98,8 +98,8 @@ We have 5 steps:
     ```
     - Download the image with the your version
     ```sh
-    curl -O https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/[YOU_VERSION]/config/master/aws-k8s-cni.yaml
-    curl -O curl -O https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.12.6/config/master/aws-k8s-cni.yaml
+    curl -O https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/[YOU_VERSION]/config/master/aws-k8s-cni.yaml   
+    curl -O https://raw.githubusercontent.com/aws/amazon-vpc-cni-k8s/v1.16.2/config/master/aws-k8s-cni.yaml ### it is better to creat a directory cd in it and run this command to download (this file will be download:  aws-k8s-cni.yaml)
     ```
     - check the region 
     ```
@@ -116,8 +116,10 @@ We have 5 steps:
     ```
     - Check the version again
     ```
-    kubectl describe daemonset aws-node --namespace kube-system | grep Image | cut -d "/" -f 2
+    kubectl describe daemonset aws-node --namespace kube-system | grep amazon-k8s-cni: | cut -d : -f 3
     ```
+    output
+        v1.16.2
     - Check pods
     ```
     kubectl get daemonset aws-node -n kube-system
@@ -134,6 +136,15 @@ brew install jq
 sudo apt update
 sudo apt install -y jq
 ```
+3. windows 
+install chocolate
+```
+@"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -InputFormat None -ExecutionPolicy Bypass -Command "iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))" && SET "PATH=%PATH%;%ALLUSERSPROFILE%\chocolatey\bin"
+```
+```
+choco install jq
+```
+
 
 ## Flip the nodes
 
